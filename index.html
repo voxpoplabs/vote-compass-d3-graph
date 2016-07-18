@@ -1,0 +1,21 @@
+<html>
+  <head>
+    <title>Vote Compass USA 2016 ~ Political Landscape Graph</title>
+    <meta charset="utf-8" />
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="src/vc_d3_pl_graph.js" type="text/JavaScript"></script>
+  </head>
+<body>
+  <div id='graphResultsContainer', style='height: 100%'>
+  </div>
+</body>
+  <footer>
+    <script>
+      var graph = new D3VoteCompassGraph(
+        {
+          elSelector: '#graphResultsContainer'
+        }
+      );
+    </script>
+  </footer>
+</html>
