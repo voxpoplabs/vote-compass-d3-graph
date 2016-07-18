@@ -1,3 +1,30 @@
+var partyIdeologies = [
+  {
+    x: -1,
+    y: 1,
+    name: 'Johnson',
+    colour: '#fa7b14'
+  },
+  {
+    x: -0.33,
+    y: 0.24,
+    name: 'Clinton',
+    colour: '#2790d6'
+  },
+  {
+    x: -0.37,
+    y: 0.086,
+    name: 'Stein',
+    colour: '#01953d'
+  },
+  {
+    x: 0.421,
+    y: -0.48,
+    name: 'Trump',
+    colour: '#e0161a'
+  }
+]
+
 if(typeof(d3) === "undefined") {
   console.log('The Political Landscape Graph requires D3.js be installed');
 };
@@ -12,7 +39,12 @@ D3VoteCompassGraph = function(options) {
   initialDraw = true,
   that = this;
 
-  d$svg.append('g').attr('class', 'graph');
+  d$svg.append('g').attr('class', 'graph')
+    .selectAll('ciricle.party.ideology')
+    .data(partyIdeologies)
+    .enter()
+    .append('circle')
+    .attr('class', 'party ideology');
 
   function redraw() {
     this.svgWidth = Number(d$svg.style('width').slice(0, -2)),
@@ -20,7 +52,18 @@ D3VoteCompassGraph = function(options) {
     this.graphWidth = this.svgWidth - (this.marginWidth * 2),
     this.scale = d3.scaleLinear().domain([-1,1]).range([0, this.graphWidth]);
 
-    layoutGraphAndGrid.apply(this);
+    d$graph = layoutGraphAndGrid.apply(this);
+
+    d$graph.selectAll('circle.party.ideology').each(function(d, i) {
+      var
+      cCoord = that.scale(d.x),
+      yCoord = that.scale(-d.y);
+      d3.select(this)
+        .attr('cx', cCoord)
+        .attr('cy', yCoord)
+        .attr('r', 6)
+        .style('fill', d.colour);
+    });
 
     initialDraw = false;
     return this;
@@ -64,7 +107,7 @@ D3VoteCompassGraph = function(options) {
      girdLineTypes.forEach(function(lineType) {
        if (initialDraw) {
          d$graph.selectAll("line.grid." + lineType)
-           .data(tickVals).enter().append('line')
+           .data(tickVals).enter().insert('line', 'circle')
            .attr('class', "grid " + lineType);
        }
 
@@ -90,7 +133,8 @@ D3VoteCompassGraph = function(options) {
            return width + 'px';
          });
      }
-     return null;
+
+     return d$graph;
   }
 
   return publicInterface;
