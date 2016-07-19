@@ -23,7 +23,7 @@ var partyIdeologies = [
     name: 'Trump',
     colour: '#e0161a'
   }
-]
+];
 
 if(typeof(d3) === "undefined") {
   console.log('The Political Landscape Graph requires D3.js be installed');
@@ -39,12 +39,7 @@ D3VoteCompassGraph = function(options) {
   initialDraw = true,
   that = this;
 
-  d$svg.append('g').attr('class', 'graph')
-    .selectAll('ciricle.party.ideology')
-    .data(partyIdeologies)
-    .enter()
-    .append('circle')
-    .attr('class', 'party ideology');
+  d$svg.append('g').attr('class', 'graph');
 
   function redraw() {
     this.svgWidth = Number(d$svg.style('width').slice(0, -2)),
@@ -52,17 +47,35 @@ D3VoteCompassGraph = function(options) {
     this.graphWidth = this.svgWidth - (this.marginWidth * 2),
     this.scale = d3.scaleLinear().domain([-1,1]).range([0, this.graphWidth]);
 
-    d$graph = layoutGraphAndGrid.apply(this);
+    this.d$graph = layoutGraphAndGrid.apply(this);
 
-    d$graph.selectAll('circle.party.ideology').each(function(d, i) {
-      var
-      cCoord = that.scale(d.x),
-      yCoord = that.scale(-d.y);
-      d3.select(this)
-        .attr('cx', cCoord)
-        .attr('cy', yCoord)
-        .attr('r', 6)
-        .style('fill', d.colour);
+    this.d$newPartyPoints = this.d$graph.selectAll('g.party.ideology')
+      .data(partyIdeologies)
+      .enter()
+      .append('g')
+      .attr('class', 'party ideology').each(function(_) {
+        var point = d3.select(this);
+
+        point.append('circle').attr('class', 'halo');
+        point.append('circle').attr('class', 'nub');
+      });
+
+    this.d$graph.selectAll('g.party.ideology').each(function(d, i) {
+        var
+        cCoord = that.scale(d.x),
+        yCoord = that.scale(-d.y),
+        point = d3.select(this).attr('transform', transStr(cCoord, yCoord));
+
+        point.select('circle.halo')
+          .attr('r', 6)
+          .style('fill', 'none')
+          .style('stroke-width', 1)
+          .style('stroke', d.colour);
+
+        point.select('circle.nub')
+          .attr('r', 4)
+          .style('fill', d.colour)
+          .style('stroke', 'none');
     });
 
     initialDraw = false;
@@ -107,7 +120,7 @@ D3VoteCompassGraph = function(options) {
      girdLineTypes.forEach(function(lineType) {
        if (initialDraw) {
          d$graph.selectAll("line.grid." + lineType)
-           .data(tickVals).enter().insert('line', 'circle')
+           .data(tickVals).enter().append('line')
            .attr('class', "grid " + lineType);
        }
 
