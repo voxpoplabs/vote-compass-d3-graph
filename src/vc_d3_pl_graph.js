@@ -58,13 +58,17 @@ D3VoteCompassGraph = function(options) {
 
         point.append('circle').attr('class', 'halo');
         point.append('circle').attr('class', 'nub');
+        point.append('text').attr('class', 'label');
       });
 
     this.d$graph.selectAll('g.party.ideology').each(function(d, i) {
         var
         cCoord = that.scale(d.x),
         yCoord = that.scale(-d.y),
-        point = d3.select(this).attr('transform', transStr(cCoord, yCoord));
+        point = d3.select(this).attr('transform', transStr(cCoord, yCoord)),
+        labelDeltaX = (d.x >= 0) ? -8 : 8,
+        labelDeltaY = (d.y >= 0) ? 12 : -2,
+        labelAlignment = (d.x >= 0) ? 'end' : 'start';
 
         point.select('circle.halo')
           .attr('r', 6)
@@ -76,6 +80,17 @@ D3VoteCompassGraph = function(options) {
           .attr('r', 4)
           .style('fill', d.colour)
           .style('stroke', 'none');
+
+        point.select('text.label')
+          .attr('y', labelDeltaY)
+          .attr('x', labelDeltaX)
+          .style('text-anchor', labelAlignment)
+          .style('font-size', 11)
+          .style('font-family', 'Libre Franklin')
+          .style('font-weight', 800)
+          .style('fill', d.colour)
+          .text(d.name.toUpperCase());
+
     });
 
     initialDraw = false;
