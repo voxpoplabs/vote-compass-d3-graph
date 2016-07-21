@@ -1,4 +1,4 @@
-var partyIdeologies = [
+var candidatesData = [
   {
     x: -1,
     y: 1,
@@ -25,11 +25,56 @@ var partyIdeologies = [
   }
 ];
 
+var youData = [{
+  x: -0.32,
+  y: 0.24,
+  name: 'You',
+  colour: '#818181'
+}];
+
+var candidateClustersData = [
+  [
+    {
+      x: 0.423,
+      y: 0.48,
+      name: 'Stein',
+      colour: '#01953d'
+    },
+    {
+      x: 0.43,
+      y: 0.499,
+      name: 'Trump',
+      colour: '#e0161a'
+    },
+    {
+      x: 0.44,
+      y: 0.51,
+      name: 'Johnson',
+      colour: '#fa7b14'
+    }
+  ],
+  [
+    {
+      x: -0.99,
+      y: -0.99,
+      name: 'Johnson',
+      colour: '#fa7b14'
+    },
+    {
+      x: -1,
+      y: -1,
+      name: 'Clinton',
+      colour: '#2790d6'
+    }
+  ]
+];
+
 if(typeof(d3) === "undefined") {
   console.log('The Political Landscape Graph requires D3.js be installed');
 };
 
 D3VoteCompassGraph = function(options) {
+
   var
   elSelector = options.elSelector,
   d$svg = d3.select(elSelector).append('svg')
@@ -47,51 +92,203 @@ D3VoteCompassGraph = function(options) {
     this.graphWidth = this.svgWidth - (this.marginWidth * 2),
     this.scale = d3.scaleLinear().domain([-1,1]).range([0, this.graphWidth]);
 
-    this.d$graph = layoutGraphAndGrid.apply(this);
+    var
+    d$graph = layoutGraphAndGrid.apply(this);
+    candidates = d$graph.selectAll('g.candidate').data(candidatesData);
+    candidateClusters = d$graph.selectAll('g.candidates').data(candidateClustersData);
 
-    this.d$newPartyPoints = this.d$graph.selectAll('g.party.ideology')
-      .data(partyIdeologies)
-      .enter()
-      .append('g')
-      .attr('class', 'party ideology').each(function(_) {
-        var point = d3.select(this);
+    // candidates.exit().remove('g.candidate');
+    // candidates.enter().append('g').attr('class', 'candidate').each(function(_) {
+    //   var d$this = d3.select(this);
 
-        point.append('circle').attr('class', 'halo');
-        point.append('circle').attr('class', 'nub');
-        point.append('text').attr('class', 'label');
+    //   d$this.append('circle').attr('class', 'nub');
+    //   d$this.append('text').attr('class', 'label');
+    // });
+    // d$graph.selectAll('g.candidate').each(function(d, i) {
+    //   var
+    //   xCoord = that.scale(d.x),
+    //   yCoord = that.scale(-d.y),
+    //   d$this = d3.select(this).attr('transform', transStr(xCoord, yCoord)),
+    //   labelDeltaX = (d.x >= 0) ? -8 : 8,
+    //   labelDeltaY = (d.y >= 0) ? 12 : -2,
+    //   labelAlignment = (d.x >= 0) ? 'end' : 'start';
+
+    //   d$this.select('circle.nub')
+    //     .attr('r', 4)
+    //     .style('fill', d.colour)
+    //     .style('stroke', 'none')
+    //     .style('opacity', 1);
+
+    //   d$this.select('text.label')
+    //     .attr('y', labelDeltaY)
+    //     .attr('x', labelDeltaX)
+    //     .style('text-anchor', labelAlignment)
+    //     .style('font-size', 11)
+    //     .style('font-family', 'Libre Franklin')
+    //     .style('font-weight', 800)
+    //     .style('fill', d.colour)
+    //     .text(d.name.toUpperCase());
+    // });
+
+    candidateClusters.exit().remove('g.candidates');
+    candidateClusters.enter().append('g').attr('class', 'candidates').each(function(_) {
+      var d$this = d3.select(this);
+
+      d$this.append('text').attr('class', 'labels');
+    });
+    d$graph.selectAll('g.candidates').each(function(d, i) {
+      var
+      d$this = d3.select(this),
+      candidateDots = d$this.selectAll('circle.nub').data(d), // todo: d.map(x & y only)
+      referenceDataIndex = 0, // figure out which dot is the reference point for the cluster
+      xCoord = that.scale(d[referenceDataIndex].x),
+      yCoord = that.scale(-d[referenceDataIndex].y),
+      allData = d,
+      opacityStartVal = 0.3;
+
+      d$this.attr('transform', transStr(xCoord, yCoord));
+
+      candidateDots.exit().remove('circle.nub');
+      candidateDots.enter().append('circle').attr('class', 'nub');
+      candidateDots = d$this.selectAll('circle.nub');
+
+      candidateDots.each(function(d, i) {
+        var
+        d$this = d3.select(this),
+        xCoord = (i === referenceDataIndex) ? 0 : that.scale(d.x) - that.scale(allData[referenceDataIndex].x),
+        yCoord = (i === referenceDataIndex) ? 0 : that.scale(allData[referenceDataIndex].y) - that.scale(d.y);
+
+        d$this.attr('cx', xCoord)
+        .attr('cy', yCoord)
+        .attr('r', 6)
+        .style('fill', d.colour)
+        .style('stroke', 'none')
+        .style('opacity', opacityStartVal);
       });
 
-    this.d$graph.selectAll('g.party.ideology').each(function(d, i) {
-        var
-        cCoord = that.scale(d.x),
-        yCoord = that.scale(-d.y),
-        point = d3.select(this).attr('transform', transStr(cCoord, yCoord)),
-        labelDeltaX = (d.x >= 0) ? -8 : 8,
-        labelDeltaY = (d.y >= 0) ? 12 : -2,
-        labelAlignment = (d.x >= 0) ? 'end' : 'start';
+      (function repeat(d) {
+        var lastIndex, nextIndex;
 
-        point.select('circle.halo')
+        if(typeof(d) === "undefined") {
+          nextIndex = 0;
+        } else {
+          lastIndex = allData.findIndex(function(datum) { return datum.name === d.name; });
+          nextIndex = (lastIndex === allData.length - 1) ? 0 : lastIndex + 1;
+        }
+
+        var nextDot = candidateDots.filter(function(d, i) { return i === nextIndex; });
+
+        nextDot.transition()
+          .duration(800)
           .attr('r', 6)
-          .style('fill', 'none')
-          .style('stroke-width', 1)
-          .style('stroke', d.colour);
+          .style('opacity', 1)
+          .transition()
+          .attr('r', 6)
+          .style('opacity', opacityStartVal)
+          .on('end', repeat);
+      })();
 
-        point.select('circle.nub')
-          .attr('r', 4)
-          .style('fill', d.colour)
-          .style('stroke', 'none');
+      var
+      d$labels = d$this.select('text.labels'),
+      candidateLabels = d$labels.selectAll('tspan').data(d), // todo: d.map(label & colour only)
+      positiveY = d[referenceDataIndex].y >= 0,
+      positiveX = d[referenceDataIndex].x >= 0,
+      labelDeltaX = (positiveX) ? -8 : 8,
+      labelDeltaY = (positiveY) ? 8 : 0,
+      labelAlignment = (positiveX) ? 'end' : 'start',
+      lastDataIndex = d.length - 1;
 
-        point.select('text.label')
-          .attr('y', labelDeltaY)
-          .attr('x', labelDeltaX)
-          .style('text-anchor', labelAlignment)
-          .style('font-size', 11)
-          .style('font-family', 'Libre Franklin')
-          .style('font-weight', 800)
-          .style('fill', d.colour)
-          .text(d.name.toUpperCase());
+      d$labels.attr('transform', transStr(labelDeltaX, labelDeltaY))
+        .style('text-anchor', labelAlignment)
+        .style('font-size', 11)
+        .style('font-family', 'Libre Franklin')
+        .style('font-weight', 800);
 
+      candidateLabels.exit().remove('tspan');
+      candidateLabels.enter().append('tspan').attr('class', 'label');
+      d$labels.selectAll('tspan').each(function(d, i) {
+        var
+        d$this = d3.select(this),
+        offsetX = i * (positiveX ? -5 : -5),
+        offsetY = i * (positiveY ? 11 : -11);
+
+        d$this
+        .attr('y', offsetY)
+        .attr('x', offsetX)
+        .style('fill', d.colour)
+        .text(d.name.toUpperCase());
+      });
     });
+
+    // this.d$graph.selectAll('g.you.ideology')
+    //   .data(youIdeology)
+    //   .enter()
+    //   .append('g')
+    //   .attr('class', 'you ideology').each(function(_) {
+    //     var
+    //     point = d3.select(this),
+    //     cross = point.append('g').attr('class', 'cross');
+
+    //     point.append('circle').attr('class', 'halo');
+    //     point.append('circle').attr('class', 'nub');
+    //     point.append('text').attr('class', 'label');
+    //     cross.append('line').attr('class', 'first');
+    //     cross.append('line').attr('class', 'second');
+    //   });
+
+    // this.d$graph.selectAll('g.you.ideology').each(function(d, i) {
+    //     var
+    //     cCoord = that.scale(d.x),
+    //     yCoord = that.scale(-d.y),
+    //     point = d3.select(this).attr('transform', transStr(cCoord, yCoord)),
+    //     cross = point.select('g.cross'),
+    //     crossArmLength = 7,
+    //     labelDeltaY = (d.y >= 0) ? -15 : 15,
+    //     labelAlignment = 'middle';
+
+    //     cross.select('line.first')
+    //       .attr('x1', -crossArmLength)
+    //       .attr('y1', -crossArmLength)
+    //       .attr('x2', crossArmLength)
+    //       .attr('y2', crossArmLength)
+    //       .style('fill', 'none')
+    //       .style('stroke-width', 1.5)
+    //       .style('stroke', d.colour);
+
+    //     cross.select('line.second')
+    //       .attr('x1', -crossArmLength)
+    //       .attr('y1', crossArmLength)
+    //       .attr('x2', crossArmLength)
+    //       .attr('y2', -crossArmLength)
+    //       .style('fill', 'none')
+    //       .style('stroke-width', 1.5)
+    //       .style('stroke', d.colour);
+
+
+    //     point.select('circle.halo')
+    //       .attr('r', 12)
+    //       .style('fill', 'none')
+    //       .style('stroke-width', 2)
+    //       .style('stroke-opacity', 1)
+    //       .style('stroke-dasharray', "2, 1")
+    //       .style('stroke', d.colour);
+
+    //     // point.select('circle.nub')
+    //     //   .attr('r', 4)
+    //     //   .style('fill', d.colour)
+    //     //   .style('stroke', 'none')
+    //     //   .style('opacity', 1);
+
+    //     point.select('text.label')
+    //       .attr('y', labelDeltaY)
+    //       .style('text-anchor', labelAlignment)
+    //       .style('font-size', 12)
+    //       .style('font-family', 'Libre Franklin')
+    //       .style('font-weight', 800)
+    //       .style('fill', d.colour)
+    //       .text(d.name.toUpperCase());
+
+    // });
 
     initialDraw = false;
     return this;
